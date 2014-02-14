@@ -15,7 +15,7 @@ class ExecutionTraceEntry(object):
         s = 0
         for _, size in self._fields:
             if type(size) == list:
-                s += len(size)
+                s += len(size) * size[0]
             else:
                 s += size
         # len in bytes
