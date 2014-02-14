@@ -22,7 +22,7 @@ class ExecutionTraceEntry(object):
         return int(s/8)
 
     def __str__(self):
-        s = ''
+        s = '%s: ' % (self.__class__.__name__)
         for field, size in self._fields:
             if type(size) == list:
                 s += 'uint%d_t %s = [' % (size[0], field)
@@ -126,8 +126,98 @@ class ExecutionTraceInstr(ExecutionTraceEntry):
         self._fields = [("isSymbolic", 8), ("arch", 32), ("pc", 64), ("symbMask", 32), ("flags", 64), ("arm_registers", [32] * 15)]
         super(ExecutionTraceInstr, self).__init__()
 
+class ExecutionTraceType(object):
+    TRACE_MOD_LOAD     = 0
+    TRACE_MOD_UNLOAD   = 1
+    TRACE_PROC_UNLOAD  = 2
+    TRACE_CALL         = 3
+    TRACE_RET          = 4
+    TRACE_TB_START     = 5
+    TRACE_TB_END       = 6
+    TRACE_MODULE_DESC  = 7
+    TRACE_FORK         = 8
+    TRACE_CACHESIM     = 9
+    TRACE_TESTCASE     = 10
+    TRACE_BRANCHCOV    = 11
+    TRACE_MEMORY       = 12
+    TRACE_PAGEFAULT    = 13
+    TRACE_TLBMISS      = 14
+    TRACE_ICOUNT       = 15
+    TRACE_MEM_CHECKER  = 16
+    TRACE_INSTR_START  = 17
+    TRACE_MAX          = 18
+    types = [
+            ('TRACE_MOD_LOAD',   None),
+            ('TRACE_MOD_UNLOAD', None),
+            ('TRACE_PROC_UNLOAD',None),
+            ('TRACE_CALL',       None),
+            ('TRACE_RET',        None),
+            ('TRACE_TB_START',   None),
+            ('TRACE_TB_END',     None),
+            ('TRACE_MODULE_DESC',None),
+            ('TRACE_FORK',       ExecutionTraceFork),
+            ('TRACE_CACHESIM',   None),
+            ('TRACE_TESTCASE',   None),
+            ('TRACE_BRANCHCOV',  None),
+            ('TRACE_MEMORY',     None),
+            ('TRACE_PAGEFAULT',  None),
+            ('TRACE_TLBMISS',    None),
+            ('TRACE_ICOUNT',     None),
+            ('TRACE_MEM_CHECKER',None),
+            ('TRACE_INSTR_START',ExecutionTraceInstr),
+            ('TRACE_MAX',        None)
+    ]
+    @staticmethod
+    def get_type_from_val(val):
+        if val >= len(ExecutionTraceType.types):
+            return None
+        else:
+            return ExecutionTraceType.types[val][1]
+
+class TraceFile(object):
+    def __init__(self, path):
+        self._path = path
+        self._data = None
+
+    def load(self):
+        with open(self._path, 'r') as f:
+            self._data = self.loads(f.read())
+
+    def loads(self, data_in):
+        parsed_len = 0
+        total_len = len(data_in)
+        ret = []
+        while parsed_len < total_len:
+            hdr = ExecutionTraceItemHeader()
+            ret += [hdr]
+            try:
+                hdr.loads(data_in[parsed_len:])
+            except:
+                break
+            parsed_len += len(hdr)
+            print(str(hdr))
+            next_type = (ExecutionTraceType.get_type_from_val(hdr.type))
+            if next_type == None:
+                print("Unknown type: 0x%x" % hdr.type)
+            else:
+                payload = next_type()
+                print(str(payload))
+                ret += [payload]
+            parsed_len += hdr.size
+        return ret
+
+    def get_entries(self):
+        if not self._data:
+            self.load()
+        return self._data
+
 
 if __name__ == "__main__":
+    f = TraceFile('/tmp/s2e_output/s2e-last/ExecutionTracer.dat')
+    #f = TraceFile('../s2e-arm-testsuite/tests/arm-bigendian/s2e-out-46/ExecutionTracer.dat')
+    print(str(f.get_entries()))
+
+if __name__ == "__main__1":
     m = ExecutionTraceMemory()
     print(m)
     print(len(m))
