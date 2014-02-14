@@ -1,5 +1,6 @@
 import struct
 from collections import namedtuple
+import datetime
 
 class ExecutionTraceEntry(object):
     def __init__(self):
@@ -52,10 +53,11 @@ class ExecutionTraceEntry(object):
                 s += self.get_field_descr_for_pack(size[0]) * len(size)
             else:
                 s += self.get_field_descr_for_pack(size)
+        # values = struct.unpack(s, data[:total_size])
         try:
             values = struct.unpack(s, data[:total_size])
         except struct.error:
-            raise Exception("Failed to unpack: %s[%s]" % (repr(data), s))
+            raise Exception("Failed to unpack: %s-%s-%s" % (s, len(data[:total_size]), self.__class__.__name__))
 
         c = 0
         for field, size in self._fields:
@@ -76,6 +78,13 @@ class ExecutionTraceEntry(object):
             return 'B' * (int(size/8))
 
 class ExecutionTraceMemory(ExecutionTraceEntry):
+    EXECTRACE_MEM_WRITE = 1
+    EXECTRACE_MEM_IO = 2
+    EXECTRACE_MEM_SYMBVAL = 4
+    EXECTRACE_MEM_SYMBADDR = 8
+    EXECTRACE_MEM_HASHOSTADDR = 16
+    EXECTRACE_MEM_SYMBHOSTADDR = 32
+    EXECTRACE_MEM_CODE = 64
     def __init__(self):
         self._fields = [('pc',64), ('address',64), ('value',64), ('size',8), ('flags',8)]
         super(ExecutionTraceMemory, self).__init__()
@@ -159,7 +168,7 @@ class ExecutionTraceType(object):
             ('TRACE_CACHESIM',   None),
             ('TRACE_TESTCASE',   None),
             ('TRACE_BRANCHCOV',  None),
-            ('TRACE_MEMORY',     None),
+            ('TRACE_MEMORY',     ExecutionTraceMemory),
             ('TRACE_PAGEFAULT',  None),
             ('TRACE_TLBMISS',    None),
             ('TRACE_ICOUNT',     None),
@@ -195,18 +204,27 @@ class TraceFile(object):
             except:
                 break
             parsed_len += len(hdr)
-            print(str(hdr))
+            #print(str(hdr))
+            #print(datetime.datetime.fromtimestamp(hdr.timeStamp).strftime('%Y-%m-%d %H:%M:%S'))
             next_type = (ExecutionTraceType.get_type_from_val(hdr.type))
             if next_type == None:
                 print("Unknown type: 0x%x" % hdr.type)
             else:
                 payload = next_type()
-                print(str(payload))
+                try:
+                    payload.loads(data_in[parsed_len:])
+                except:
+                    break
+                if next_type == ExecutionTraceMemory:
+                    print(str(payload))
+                #print(str(payload))
+                #print(hex(payload.arm_registers[1]))
+                #print(hex(payload.pc))
                 ret += [payload]
             parsed_len += hdr.size
         return ret
 
-    def get_entries(self):
+    def get_entries_ok(self):
         if not self._data:
             self.load()
         return self._data
@@ -215,7 +233,7 @@ class TraceFile(object):
 if __name__ == "__main__":
     f = TraceFile('/tmp/s2e_output/s2e-last/ExecutionTracer.dat')
     #f = TraceFile('../s2e-arm-testsuite/tests/arm-bigendian/s2e-out-46/ExecutionTracer.dat')
-    print(str(f.get_entries()))
+    print('Processed: %d entries' % len(f.get_entries_ok()))
 
 if __name__ == "__main__1":
     m = ExecutionTraceMemory()
