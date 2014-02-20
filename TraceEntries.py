@@ -253,36 +253,9 @@ class TraceFile(object):
         return cnt
 
 
-    def get_entries_ok(self):
-        if not self._data:
-            self.load()
-        return self._data
+
 
 
 if __name__ == "__main__":
-    #f = TraceFile('/tmp/s2e_output/s2e-last/ExecutionTracer.dat')
-    #f = TraceFile('/tmp/2/s2e-last/ExecutionTracer.dat')
-    f = TraceFile(sys.argv[1])
-    entries = f.count_entries_ok()
-    #process_entries(entries)
-    #f = TraceFile('../s2e-arm-testsuite/tests/arm-bigendian/s2e-out-46/ExecutionTracer.dat')
-    print('Processed: %d entries' % (entries))
-
-if __name__ == "__main__1":
-    m = ExecutionTraceMemory()
-    print(m)
-    print(len(m))
-    print(repr(m.dumps()))
-    m.loads('\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\x00')
-    print(repr(m.dumps()))
-    print(str(m))
-    t = ExecutionTraceTb()
-    print(str(t))
-    t.registers[0] = 0x99999999
-    print(str(t))
-    print(repr(t.dumps()))
-    t = ExecutionTraceInstr()
-    print(str(t))
-    t.arm_registers[0] = 0x99999999
-    print(str(t))
-    print(repr(t.dumps()))
+    cnt = TraceFile(sys.argv[1]).count_entries_ok()
+    print('Processed: %d entries' % (cnt))
