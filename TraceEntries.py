@@ -223,7 +223,7 @@ class TraceFile(object):
         while parsed_len < total_len:
             hdr = ExecutionTraceItemHeader()
             try:
-                hdr.loads(self._data_in[parsed_len:parsed_len+len(hdr)+1])
+                hdr.loads(self._data_in[parsed_len:parsed_len+len(hdr)])
             except:
                 print("Unable to load execution trace item header")
                 break
