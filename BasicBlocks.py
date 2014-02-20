@@ -1,41 +1,151 @@
 import re
+from pygraph.classes.digraph import digraph
+from pygraph.readwrite.dot import write
 
 STATE_BEFORE_BEGINNING = 0
 STATE_INSIDE = 1
 STATE_AFTER = 2
 
-class BasicBlocks():
-    def __init__(self, qemu_trace_file):
-        self._qemu_trace_file = qemu_trace_file
+CF_REGULAR = 0
+CF_UNCONDITIONAL_BRANCH = 1
+CF_CONDITIONAL_BRANCH = 2
+CF_INDIRECT = 3
+CF_CALL = 4
+CF_INDIRECT_CALL = 5
+CF_RETURN = 6
+
+RE_HEXNUM = re.compile("(0x)?[0-9a-fA-F]+")
+
+class BasicBlock():
+    def __init__(self, start, end, last_line = ""):
+        self.start = start
+        self.end = end
+        self.last_line = last_line
+        self.control_flow = []
         
-    def get_basic_blocks(self):
-        RE_PC = re.compile("^(0x[0-9a-f]{8}):.*")
+    def __str__(self):
+        return "0x%08x-0x%08x" % (self.start, self.end)
         
-        with open(self._qemu_trace_file, 'r') as file:
-            state = STATE_AFTER
-            for line in file.readlines():
-                line = line.strip()
-                match = RE_PC.match(line)
-            
-                if line.startswith("IN:"):
-                    state = STATE_BEFORE_BEGINNING
-                elif state == STATE_BEFORE_BEGINNING and match:
-                    start_pc = int(match.group(1), 16)
-                    end_pc = start_pc
-                    state = STATE_INSIDE
-                elif state == STATE_INSIDE:
-                    if match:
-                        end_pc = int(match.group(1), 16)
-                    else:
-                        yield (start_pc, end_pc)
-                        state = STATE_AFTER
-                        
+    def __repr__(self):
+        return self.__str__()
+        
+def get_basic_blocks(qemu_trace_file):
+    """Takes the path to a qemu trace file (with in_asm tracing enabled) 
+       and outputs an iterator of BasicBlock objects."""
+    RE_PC = re.compile("^(0x[0-9a-f]{8}):.*$")
     
+    with open(qemu_trace_file, 'r') as file:
+        state = STATE_AFTER
+        lastline = None
+        for line in file.readlines():
+            line = line.strip()
+            match = RE_PC.match(line)
+        
+            if line.startswith("IN:"):
+                state = STATE_BEFORE_BEGINNING
+            elif state == STATE_BEFORE_BEGINNING and match:
+                start_pc = int(match.group(1), 16)
+                end_pc = start_pc
+                lastline = line
+                state = STATE_INSIDE
+            elif state == STATE_INSIDE:
+                if match:
+                    end_pc = int(match.group(1), 16)
+                    lastline = line
+                else:
+                    yield BasicBlock(start_pc, end_pc, lastline)
+                    state = STATE_AFTER
+                        
+def parse_mnem(pc, mnem, params):
+    """Parses an ARM mnemonic and returns the control flow for this instruction.
+       The control flow is a tuple of (Control flow type, static target PC)."""
+    if mnem == "b":
+        match = RE_HEXNUM.match(params.strip())
+        if match:
+            return [(CF_UNCONDITIONAL_BRANCH, int(match.group(0), 16))]
+        else:
+            raise RuntimeError("Cannot parse branch target of direct branch")
+    elif mnem == "bl":
+        match = RE_HEXNUM.match(params.strip())
+        if match:
+            return [(CF_CALL, int(match.group(0), 16))]
+        else:
+            return [(CF_INDIRECT_CALL, None)]  
+    elif mnem == "blx":
+        raise RuntimeError("BLX instruction encountered, no code here to handle thumb") 
+    elif mnem.startswith("b"):
+        match = RE_HEXNUM.match(params.strip())
+        if match:
+            return [(CF_REGULAR, pc), (CF_CONDITIONAL_BRANCH, int(match.group(0), 16))]
+        else:
+            raise RuntimeError("Cannot parse branch target of conditional branch")
+    elif mnem == "mov" and params.startswith("pc"):
+        return [(CF_RETURN, None)]  
+    elif mnem.startswith("mov") and params.startswith("pc"):
+        return [(CF_RETURN, None), (CF_REGULAR, pc + 4)]  
+    elif mnem == "ldr" and params.startswith("pc, [pc"):
+        print("TODO: figure out target of LDR at 0x%08x" % pc)
+        return [(CF_UNCONDITIONAL_BRANCH, None)]
+    elif mnem == "ldr":
+        return [(CF_INDIRECT, None)]
+    elif mnem == "pop" and "pc" in params:
+        return [(CF_RETURN, None)]
+    elif mnem.startswith("pop") and "pc" in params:
+        return [(CF_RETURN, None), (CF_REGULAR, pc + 4)]
+    else:
+        print("WARNING: Unknown instruction '%s' '%s' at 0x%x" % (mnem, params, pc))
+        return [(CF_REGULAR, pc + 4)]
+                        
+def get_outgoing(basic_blocks):
+    """Enriches an iterator of basic blocks so that the control_flow attribute of each
+       basic block is meaningful."""
+    RE_INSTR = re.compile("^(0x[0-9a-f]{8}):\s+([0-9a-f]{8})\s+([a-z]+)\s+([^;]*)(;.*)?$")
+    for bb in basic_blocks:
+        match = RE_INSTR.match(bb.last_line)
+        if match:
+            pc = int(match.group(1), 16)
+            opcode = match.group(2)
+            mnem = match.group(3)
+            params = match.group(4)
+
+            bb.control_flow = parse_mnem(pc, mnem, params)
+            yield bb  
+                
+def build_static_cfg(basic_blocks):
+    """Build a pygraph digraph object from an iterator of basic blocks."""
+    nodes = {}
+    edges = []
+    for bb in get_outgoing(basic_blocks):
+         nodes[bb.start] = bb
+         for cf in bb.control_flow:
+             if not cf[1] is None:
+                 edges.append((bb.start, cf[1]))
+        
+    graph = digraph()
+    graph.add_nodes(nodes.values())
+    for edge in edges:
+        try:
+            start = nodes[edge[0]]
+            end = nodes[edge[1]]
+            print("Start: %s, End: %s" % (repr(start), repr(end)))
+            graph.add_edge((start, end))
+        except KeyError as err:
+            print("Dropping edge 0x%08x-0x%08x because one node seems to be not in the graph" % (edge[0], edge[1]))
+        
+    return graph
                     
 if __name__ == "__main__":
     import sys
-    for bb in BasicBlocks(sys.argv[1]).get_basic_blocks():
-        print("Basic block: 0x%08x - 0x%08x" % (bb[0], bb[1]))
+#    for bb in BasicBlocks(sys.argv[1]).get_basic_blocks():
+#        print("Basic block: 0x%08x - 0x%08x" % (bb[0], bb[1]))
+    for bb in get_outgoing(get_basic_blocks(sys.argv[1])):
+        print("BB 0x%08x-0x%08x targets %s" % (bb.start, bb.end, repr(bb.control_flow)))
+        
+    dot = write(build_static_cfg(get_outgoing(get_basic_blocks(sys.argv[1]))))
+    with open("bla.dot", 'w') as file:
+        file.write(dot)
+    
+    
     
                 
                 
