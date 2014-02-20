@@ -3,17 +3,20 @@ from collections import namedtuple
 import datetime
 import sys
 
+SET_ATTRIBUTES = False
+
 class ExecutionTraceEntry(object):
     _cached_unpacked_strings = {}
     _cached_lens = {}
     def __init__(self):
         self._data  = {}
-        for field, size in self._fields:
-            if type(size) == list:
-                empty_list = [0 for i in range(len(size))]
-                setattr(self, field, empty_list)
-            else:
-                setattr(self, field, 0)
+        if SET_ATTRIBUTES is True:
+            for field, size in self._fields:
+                if type(size) == list:
+                    empty_list = [0 for i in range(len(size))]
+                    setattr(self, field, empty_list)
+                else:
+                    setattr(self, field, 0)
 
     def __len__(self):
        try:
@@ -84,10 +87,12 @@ class ExecutionTraceEntry(object):
                     new_list += [values[c]]
                     c += 1
                 self._data[field] = new_list
-                setattr(self, field, new_list)
+                if SET_ATTRIBUTES is True:
+                    setattr(self, field, new_list)
             else:
                 self._data[field] = values[c]
-                setattr(self, field, values[c])
+                if SET_ATTRIBUTES is True:
+                    setattr(self, field, values[c])
                 c += 1
 
     def get_field_descr_for_pack(self, size):
