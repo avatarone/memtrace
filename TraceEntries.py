@@ -90,8 +90,10 @@ class ExecutionTraceEntry(object):
                 for i in range(len(size)):
                     new_list += [values[c]]
                     c += 1
+                self._data[field] = new_list
                 setattr(self, field, new_list)
             else:
+                self._data[field] = values[c]
                 setattr(self, field, values[c])
                 c += 1
 
@@ -230,9 +232,10 @@ class TraceFile(object):
             parsed_len += len(hdr)
             #print(str(hdr))
             #print(datetime.datetime.fromtimestamp(hdr.timeStamp).strftime('%Y-%m-%d %H:%M:%S'))
-            next_type = (ExecutionTraceType.get_type_from_val(hdr.type))
+            #hdr.type = hdr._data['type']
+            next_type = (ExecutionTraceType.get_type_from_val(hdr._data['type']))
             if next_type == None:
-                print("Unknown type: 0x%x" % hdr.type)
+                print("Unknown type: 0x%x" % hdr._data['type'])
             else:
                 payload = next_type()
                 try:
