@@ -218,6 +218,8 @@ class TraceFile(object):
             #print("File in memory")
 
     def generate_elements(self):
+        if self._data_in is None:
+            self._load_data()
         parsed_len = 0
         total_len = len(self._data_in)
         while parsed_len < total_len:
@@ -246,15 +248,9 @@ class TraceFile(object):
 
     def count_entries_ok(self):
         cnt = 0
-        if self._data_in is None:
-            self._load_data()
         for h, p in self.generate_elements():
             cnt += 1
         return cnt
-
-
-
-
 
 if __name__ == "__main__":
     cnt = TraceFile(sys.argv[1]).count_entries_ok()
