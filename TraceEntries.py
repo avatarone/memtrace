@@ -1,10 +1,17 @@
 import struct
 from collections import namedtuple
 import datetime
+import sys
 
 class ExecutionTraceEntry(object):
+    _cached_unpacked_strings = {}
+    _cached_lens = {}
     def __init__(self):
         self._data  = {}
+        self._cached_len = None
+        self._cached_unpack_string = None
+        self._cached_packed_string = None
+        #pass
         for field, size in self._fields:
             if type(size) == list:
                 empty_list = [0 for i in range(len(size))]
@@ -13,14 +20,21 @@ class ExecutionTraceEntry(object):
                 setattr(self, field, 0)
 
     def __len__(self):
-        s = 0
-        for _, size in self._fields:
-            if type(size) == list:
-                s += len(size) * size[0]
-            else:
-                s += size
-        # len in bytes
-        return int(s/8)
+        if self._cached_len is None:
+            try:
+                self._cached_len = ExecutionTraceEntry._cached_lens[self.__class__.__name__]
+            except KeyError:
+                print("len not in cache")
+                s = 0
+                for _, size in self._fields:
+                    if type(size) == list:
+                        s += len(size) * size[0]
+                    else:
+                        s += size
+                # len in bytes
+                ExecutionTraceEntry._cached_lens[self.__class__.__name__] = int(s/8)
+                self._cached_len = ExecutionTraceEntry._cached_lens[self.__class__.__name__]
+        return self._cached_len
 
     def __str__(self):
         s = '%s: ' % (self.__class__.__name__)
@@ -45,19 +59,29 @@ class ExecutionTraceEntry(object):
                         getattr(self, field, 0))
         return ret
 
+    def _get_unpack_string(self):
+        if self._cached_unpack_string is None:
+            try:
+                self._cached_unpack_string = ExecutionTraceEntry._cached_unpacked_strings[self.__class__.__name__]
+            except KeyError:
+                s = '<'
+                for _, size in self._fields:
+                    if type(size) == list:
+                        s += self.get_field_descr_for_pack(size[0]) * len(size)
+                    else:
+                        s += self.get_field_descr_for_pack(size)
+                ExecutionTraceEntry._cached_unpacked_strings[self.__class__.__name__] = s
+                self._cached_unpack_string = ExecutionTraceEntry._cached_unpacked_strings[self.__class__.__name__]
+                print("added to cache %s" % (self._cached_unpack_string))
+        return self._cached_unpack_string
+
     def loads(self, data):
-        s = '<'
         total_size = len(self)
-        for _, size in self._fields:
-            if type(size) == list:
-                s += self.get_field_descr_for_pack(size[0]) * len(size)
-            else:
-                s += self.get_field_descr_for_pack(size)
-        # values = struct.unpack(s, data[:total_size])
+        #values = struct.unpack(self._get_unpack_string(), data[:total_size])
         try:
-            values = struct.unpack(s, data[:total_size])
+            values = struct.unpack(self._get_unpack_string(), data[:total_size])
         except struct.error:
-            raise Exception("Failed to unpack: %s-%s-%s" % (s, len(data[:total_size]), self.__class__.__name__))
+            raise Exception("Failed to unpack: %s-%s-%s" % (self._cached_unpack_string, len(data[:total_size]), self.__class__.__name__))
 
         c = 0
         for field, size in self._fields:
