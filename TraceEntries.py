@@ -226,7 +226,7 @@ class TraceFile(object):
             hdr = ExecutionTraceItemHeader()
             ret += [hdr]
             try:
-                hdr.loads(data_in[parsed_len:])
+                hdr.loads(data_in[parsed_len:parsed_len+len(hdr)+1])
             except:
                 break
             parsed_len += len(hdr)
@@ -239,7 +239,7 @@ class TraceFile(object):
             else:
                 payload = next_type()
                 try:
-                    payload.loads(data_in[parsed_len:])
+                    payload.loads(data_in[parsed_len:parsed_len+len(payload)])
                 except:
                     break
                 if next_type == ExecutionTraceMemory:
