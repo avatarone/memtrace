@@ -205,25 +205,25 @@ class ExecutionTraceType(object):
 class TraceFile(object):
     def __init__(self, path):
         self._path = path
-        self._data = None
+        self._data_in = None
 
-    def load(self):
+    def _load_data(self):
         with open(self._path, 'r') as f:
-            self._data = self.loads(f.read())
+            self._data_in = f.read()
+            #print("File in memory")
 
-    def loads(self, data_in):
+    def generate_elements(self):
         parsed_len = 0
-        total_len = len(data_in)
-        ret = []
+        total_len = len(self._data_in)
         while parsed_len < total_len:
             hdr = ExecutionTraceItemHeader()
-            ret += [hdr]
             try:
-                hdr.loads(data_in[parsed_len:parsed_len+len(hdr)+1])
+                hdr.loads(self._data_in[parsed_len:parsed_len+len(hdr)+1])
             except:
+                print("Unable to load execution trace item header")
                 break
             parsed_len += len(hdr)
-            #print(str(hdr))
+            #print(repr(hdr._data))
             #print(datetime.datetime.fromtimestamp(hdr.timeStamp).strftime('%Y-%m-%d %H:%M:%S'))
             #hdr.type = hdr._data['type']
             next_type = (ExecutionTraceType.get_type_from_val(hdr._data['type']))
@@ -232,17 +232,21 @@ class TraceFile(object):
             else:
                 payload = next_type()
                 try:
-                    payload.loads(data_in[parsed_len:parsed_len+len(payload)])
+                    payload.loads(self._data_in[parsed_len:parsed_len+len(payload)])
                 except:
                     break
-                if next_type == ExecutionTraceMemory:
-                    print(str(payload))
-                #print(str(payload))
-                #print(hex(payload.arm_registers[1]))
-                #print(hex(payload.pc))
-                ret += [payload]
-            parsed_len += hdr.size
-        return ret
+                yield (hdr, payload)
+            #parsed_len += hdr.size
+            parsed_len += hdr._data['size']
+
+    def count_entries_ok(self):
+        cnt = 0
+        if self._data_in is None:
+            self._load_data()
+        for h, p in self.generate_elements():
+            cnt += 1
+        return cnt
+
 
     def get_entries_ok(self):
         if not self._data:
@@ -251,9 +255,13 @@ class TraceFile(object):
 
 
 if __name__ == "__main__":
-    f = TraceFile('/tmp/s2e_output/s2e-last/ExecutionTracer.dat')
+    #f = TraceFile('/tmp/s2e_output/s2e-last/ExecutionTracer.dat')
+    #f = TraceFile('/tmp/2/s2e-last/ExecutionTracer.dat')
+    f = TraceFile(sys.argv[1])
+    entries = f.count_entries_ok()
+    #process_entries(entries)
     #f = TraceFile('../s2e-arm-testsuite/tests/arm-bigendian/s2e-out-46/ExecutionTracer.dat')
-    print('Processed: %d entries' % len(f.get_entries_ok()))
+    print('Processed: %d entries' % (entries))
 
 if __name__ == "__main__1":
     m = ExecutionTraceMemory()
