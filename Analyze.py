@@ -44,6 +44,8 @@ def frequency_analysis(trace_file):
     w = []
     r = []
     for h, e in trace_file.generate_elements():
+        if total == 0:
+            min_ts = h._data['timeStamp']
         if e.__class__ == ExecutionTraceMemory:
             if ExecutionTraceMemory.EXECTRACE_MEM_WRITE & e._data['flags']:
                 w += [(e._data['address'], e._data['size'])]
@@ -53,9 +55,14 @@ def frequency_analysis(trace_file):
                 cnt_r += 1
         total += 1
 
+    print("total = %d w = %d r = %d" % (total, cnt_w, cnt_r))
+    max_ts = h._data['timeStamp']
+    #timestamp is in usec
+    print("executed instructions per seconds: %0.2f" % (total/((max_ts-min_ts)/10e6)))
+
     w.sort(key=lambda t:t[0])
     r.sort(key=lambda t:t[0])
-    print("write: %d read: %d" % (len(w), len(r)))
+    #print("write: %d : %d" % (len(w), len(r)))
 
     jw = join_accesses(w)
     jr = join_accesses(r)
@@ -81,7 +88,6 @@ def frequency_analysis(trace_file):
         count, addr, size = r_acc[c][0], r_acc[c][1], r_acc[c][2]
         print("0x%08x-0x%08x %d" % (addr, addr+size, count))
 
-    print("total = %d w = %d r = %d" % (total, cnt_w, cnt_r))
 
 if __name__ == "__main__":
     main(TraceFile(sys.argv[1]))
