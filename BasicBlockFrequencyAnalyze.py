@@ -2,14 +2,14 @@ from TraceEntries import *
 from BasicBlocks import *
 import sys
 
-def get_bb_frequency(trace_file, basic_blocks):
+def get_bb_frequency(trace_file, basic_blocks_path):
     # get most frequent bbs (i.e. the bbs that were executed most often
     # 30s on 400MB ExecTrace.dat
     all_bbs = []
     exec_freq = {}
-    for bb in basic_blocks.get_basic_blocks():
+    for bb in get_basic_blocks(basic_blocks_path):
         all_bbs += [bb]
-        exec_freq[bb[0]] = 0
+        exec_freq[bb.start] = 0
 
     # the number of basic block is pretty small (usually)
     # sort basic block by addresses
@@ -28,7 +28,7 @@ def get_bb_frequency(trace_file, basic_blocks):
             total += 1
     bb_and_freq = []
     for c in range(len(all_bbs)):
-        bb_and_freq += [(all_bbs[c][0], exec_freq[all_bbs[c][0]])]
+        bb_and_freq += [(all_bbs[c].start, exec_freq[all_bbs[c].start])]
     #bb_and_freq = [for c in range(len(all_bbs)) (all_bbs[c], exec_freq[all_bbs[c]])]
     bb_and_freq.sort(key=lambda t:-t[1])
 
@@ -44,4 +44,4 @@ def main(trace_file, basic_blocks):
                 % (bb[0], bb[1]))
 
 if __name__ == "__main__":
-    main(TraceFile(sys.argv[1]), BasicBlocks(sys.argv[2]))
+    main(TraceFile(sys.argv[1]), sys.argv[2])
