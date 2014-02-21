@@ -24,34 +24,45 @@ def build_dynamic_cfg(trace_file, basic_blocks_path):
         #if e.__class__ == ExecutionTraceMemory:
         if e.__class__ == ExecutionTraceInstr:
             total += 1
-        try:
             try:
-                this_bb = bbs_start_pos[e._data['pc']]
-            except:
-                # not a start
-                continue
-            if last_bb is None:
-                last_bb = this_bb
-                graph.node_attr[this_bb] = [("style","filled"), ("fillcolor","green")]
-                continue
-            try:
-                # add edge from last_bb to this_bb, only if doesn't exist
                 try:
-                    exit_ins = [cf[0] for cf in last_bb.control_flow]
-                    if CF_CALL not in exit_ins and \
-                            CF_INDIRECT_CALL not in exit_ins and \
-                            CF_RETURN not in exit_ins:
-                        graph.add_edge((last_bb, this_bb))
-                        added_edges += 1
-                except AdditionError:
+                    this_bb = bbs_start_pos[e._data['pc']]
+                    if e._data['pc'] == 0x0100afb8:
+                        print("TS = %s" % str(h._data['timeStamp']))
+                except:
+                    # not a start
+                    continue
+                if last_bb is None:
+                    last_bb = this_bb
+                    graph.node_attr[this_bb] = [("style","filled"), ("fillcolor","green")]
+                    continue
+                try:
+                    # add edge from last_bb to this_bb, only if doesn't exist
+                    try:
+                        exit_ins = [cf[0] for cf in last_bb.control_flow]
+                        if CF_CALL not in exit_ins and \
+                                CF_INDIRECT_CALL not in exit_ins and \
+                                CF_RETURN not in exit_ins:
+                            if last_bb == this_bb:
+                                if last_bb.start == 0x0100afb8:
+                                    print("DYNAMIC")
+                                    pass
+
+                            graph.add_edge((last_bb, this_bb))
+                            added_edges += 1
+                        else:
+                            #last_bb = None
+                            #continue
+                            pass
+                    except AdditionError:
+                        pass
+                except KeyError:
                     pass
+                last_bb = this_bb
+                last_bbs += [last_bb]
+                last_bbs = last_bbs[-L:]
             except KeyError:
-                pass
-            last_bb = this_bb
-            last_bbs += [last_bb]
-            last_bbs = last_bbs[-L:]
-        except KeyError:
-            continue
+                continue
     for i in range(L):
         graph.node_attr[last_bbs[i]] = [("style","filled"), ("color","\"#%02x0000\"" % int(100+(i+1)*150/L))]
     print("total = %d, added_edges = %d" % (total, added_edges))
