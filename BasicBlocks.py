@@ -17,15 +17,19 @@ CF_RETURN = 6
 RE_HEXNUM = re.compile("(0x)?[0-9a-fA-F]+")
 
 class BasicBlock():
-    def __init__(self, start, end, last_line = ""):
+    def __init__(self, start, end = 0, last_line = "", translated = False):
         self.start = start
         self.end = end
         self.last_line = last_line
         self.control_flow = []
         self.exit_flags = []
+        self.is_translated = translated
         
     def __str__(self):
-        return "0x%08x-0x%08x" % (self.start, self.end)
+        if self.is_translated:
+            return "0x%08x-0x%08x" % (self.start, self.end)
+        else:
+            return "0x%08x-" % self.start
         
     def __repr__(self):
         return self.__str__()
@@ -54,7 +58,7 @@ def get_basic_blocks(qemu_trace_file):
                     end_pc = int(match.group(1), 16)
                     lastline = line
                 else:
-                    yield BasicBlock(start_pc, end_pc, lastline)
+                    yield BasicBlock(start_pc, end_pc, lastline, True)
                     state = STATE_AFTER
                     
 def find_exit_conditions(opcode):
@@ -140,7 +144,7 @@ def get_outgoing(basic_blocks):
             bb.exit_flags = find_exit_conditions(opcode)
             yield bb  
                 
-def build_static_cfg(basic_blocks):
+def build_static_cfg(basic_blocks, no_function_inlining = True, add_unexplored_bbs = True):
     """Build a pygraph digraph object from an iterator of basic blocks."""
     nodes = {}
     edges = []
@@ -148,10 +152,24 @@ def build_static_cfg(basic_blocks):
          nodes[bb.start] = bb
          for cf in bb.control_flow:
              if not cf[1] is None:
-                 edges.append((bb.start, cf[1]))
+                 if no_function_inlining and cf[0] in [CF_REGULAR, CF_CONDITIONAL_BRANCH, CF_UNCONDITIONAL_BRANCH, CF_INDIRECT]:
+                     edges.append((bb.start, cf[1]))
+                 elif not no_function_inlining:
+                     edges.append((bb.start, cf[1]))
+                 
+    if add_unexplored_bbs:
+        for bb in nodes.values():
+            for cf in bb.control_flow:
+                if not cf[1] is None and not nodes.has_key(cf[1]):
+                    nodes[cf[1]] = BasicBlock(cf[1])
         
     graph = digraph()
-    graph.add_nodes(nodes.values())
+    for node in nodes.values():
+        if node.is_translated:
+            graph.add_node(node)
+        else:
+            graph.add_node(node, attrs = [("style", "filled"), ("fillcolor", "#A0A0A0")])
+            
     for edge in edges:
         try:
             start = nodes[edge[0]]
