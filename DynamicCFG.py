@@ -39,6 +39,21 @@ def build_dynamic_cfg(trace_file, basic_blocks_path):
                 try:
                     # add edge from last_bb to this_bb, only if doesn't exist
                     try:
+                        for cf_type, target_pc in this_bb.control_flow:
+                            if cf_type in [CF_REGULAR, CF_UNCONDITIONAL_BRANCH,
+                                    CF_CONDITIONAL_BRANCH, CF_INDIRECT]:
+                                try:
+                                    target_bb = bbs_start_pos[target_pc]
+                                except KeyError:
+                                    if target_pc is None:
+                                        target_pc = -1
+                                    print("target BB not found 0x@%08x" % target_pc)
+                                try:
+                                    graph.add_edge((this_bb, target_bb))
+                                    added_edges += 1
+                                except AdditionError:
+                                    # ignore this edge, already added
+                                    pass
                         exit_ins = [cf[0] for cf in last_bb.control_flow]
                         if CF_CALL not in exit_ins and \
                                 CF_INDIRECT_CALL not in exit_ins and \
