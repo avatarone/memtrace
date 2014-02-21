@@ -44,7 +44,7 @@ def build_dynamic_cfg(trace_file, basic_blocks_path):
             except KeyError:
                 edges[str(last_bb)] = [str(this_bb)]
                 pass
-            this_bb = last_bb
+            last_bb = this_bb
         except KeyError:
             continue
     print("total = %d, added_edges = %d" % (total, added_edges))
