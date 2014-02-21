@@ -1,6 +1,7 @@
 import re
 from pygraph.classes.digraph import digraph
 from pygraph.readwrite.dot import write
+import collections
 
 STATE_BEFORE_BEGINNING = 0
 STATE_INSIDE = 1
@@ -24,6 +25,7 @@ class BasicBlock():
         self.control_flow = []
         self.exit_flags = []
         self.is_translated = translated
+        self.successors = []
         
     def __str__(self):
         if self.is_translated:
@@ -33,6 +35,42 @@ class BasicBlock():
         
     def __repr__(self):
         return self.__str__()
+        
+class Function():
+    def __init__(self, name, head_bb):
+        self.name = name
+        self.head = head_bb
+        
+    def get_basic_blocks(self):
+        bbs = []
+        bbs_todo = [self.head]
+        
+        while bbs_todo:
+            bb = bbs_todo.pop()
+            bbs.append(bb)
+            for successor in bb.successors:
+                if not (successor in bbs or successor in bbs_todo):
+                    bbs_todo.append(successor)
+                    
+        return bbs
+        
+    def get_edges(self):
+        edges = []
+        bbs_todo = [self.head]
+        bbs_done = []
+        
+        while bbs_todo:
+            bb = bbs_todo.pop()
+            bbs_done.append(bb)
+            for successor in bb.successors:
+                if not successor in bbs_done and not successor in bbs_todo:
+                    bbs_todo.append(successor)
+                edges.append((bb, successor))
+        return edges
+        
+        
+    def add_basic_block(self, bb):
+        self.basic_blocks.append(bb)
         
 def get_basic_blocks(qemu_trace_file):
     """Takes the path to a qemu trace file (with in_asm tracing enabled) 
@@ -100,9 +138,9 @@ def parse_mnem(pc, mnem, params):
     elif mnem == "bl":
         match = RE_HEXNUM.match(params.strip())
         if match:
-            return [(CF_CALL, int(match.group(0), 16))]
+            return [(CF_CALL, int(match.group(0), 16)), (CF_REGULAR, pc + 4)]
         else:
-            return [(CF_INDIRECT_CALL, None)]  
+            return [(CF_INDIRECT_CALL, None), (CF_REGULAR, pc + 4)]  
     elif mnem == "blx":
         raise RuntimeError("BLX instruction encountered, no code here to handle thumb") 
     elif mnem.startswith("b"):
@@ -143,6 +181,46 @@ def get_outgoing(basic_blocks):
             bb.control_flow = parse_mnem(pc, mnem, params)
             bb.exit_flags = find_exit_conditions(opcode)
             yield bb  
+            
+def group_functions(basic_blocks):
+    functions = {}
+    
+    nodes = {}
+    for bb in get_outgoing(basic_blocks):
+        nodes[bb.start] = bb
+        for cf in bb.control_flow:
+            if cf[0] in [CF_REGULAR, CF_CONDITIONAL_BRANCH, CF_UNCONDITIONAL_BRANCH, CF_INDIRECT] and not cf[1] is None:
+                if not cf[1] in nodes:
+                    nodes[cf[1]] = BasicBlock(cf[1])
+            elif cf[0] in [CF_CALL] and not cf[1] is None:
+                functions[cf[1]] = Function("func_0x%08x" % cf[1], None)
+                
+    
+    successors = collections.defaultdict(list)
+    for node in nodes.values():
+        if node.start in functions:
+            functions[node.start].head = node
+            
+        for cf in node.control_flow:
+            if cf[0] in [CF_REGULAR, CF_CONDITIONAL_BRANCH, CF_UNCONDITIONAL_BRANCH, CF_INDIRECT] and not cf[1] is None:
+                node.successors.append(nodes[cf[1]])
+                    
+    return functions
+    
+def graph_functions(functions):
+    for function in functions.values():
+        function_graph = digraph()
+        
+        for node in function.get_basic_blocks():
+            if node.is_translated:
+                function_graph.add_node(node)
+            else:
+                function_graph.add_node(node, attrs = [("style", "filled"), ("fillcolor", "#A0A0A0")])
+        
+        for edge in function.get_edges():
+            function_graph.add_edge(edge)
+            
+        yield(function, function_graph)
                 
 def build_static_cfg(basic_blocks, no_function_inlining = True, add_unexplored_bbs = True):
     """Build a pygraph digraph object from an iterator of basic blocks."""
@@ -183,14 +261,23 @@ def build_static_cfg(basic_blocks, no_function_inlining = True, add_unexplored_b
                     
 if __name__ == "__main__":
     import sys
+    import os
+    import errno
 #    for bb in BasicBlocks(sys.argv[1]).get_basic_blocks():
 #        print("Basic block: 0x%08x - 0x%08x" % (bb[0], bb[1]))
-    for bb in get_outgoing(get_basic_blocks(sys.argv[1])):
-        print("BB 0x%08x-0x%08x targets %s" % (bb.start, bb.end, repr(bb.control_flow)))
-        
-    dot = write(build_static_cfg(get_outgoing(get_basic_blocks(sys.argv[1]))))
-    with open("bla.dot", 'w') as file:
-        file.write(dot)
+#    for bb in get_outgoing(get_basic_blocks(sys.argv[1])):
+#        print("BB 0x%08x-0x%08x targets %s" % (bb.start, bb.end, repr(bb.control_flow)))
+
+    try:
+        os.makedirs("functions")
+    except OSError as err:
+        if not (err.errno == errno.EEXIST):
+            raise err
+
+    for function_graph in graph_functions(group_functions(get_basic_blocks(sys.argv[1]))):
+        dot = write(function_graph[1])
+        with open(os.path.join("functions", function_graph[0].name + ".dot"), 'w') as file:
+            file.write(dot)
     
     
     
