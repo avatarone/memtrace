@@ -22,6 +22,7 @@ class BasicBlock():
         self.end = end
         self.last_line = last_line
         self.control_flow = []
+        self.exit_flags = []
         
     def __str__(self):
         return "0x%08x-0x%08x" % (self.start, self.end)
@@ -55,6 +56,33 @@ def get_basic_blocks(qemu_trace_file):
                 else:
                     yield BasicBlock(start_pc, end_pc, lastline)
                     state = STATE_AFTER
+                    
+def find_exit_conditions(opcode):
+    """Take an ARM opcode (32 bit number), extract the condition field and return
+       an array of (flag, value) tuples. Values can be 0, 1 or 'S' for symbolic.
+       If the flags are set accordingly, two states should be spawned, were one
+       executes the conditional instruction and the other doesn't."""
+    condition_code = (opcode >> 28) & 0xf
+    if condition_code in [0, 1]: #EQ, NE
+        return [('Z', 'S')]
+    elif condition_code in [2, 3]: #CS, CC
+        return [('C', 'S')]
+    elif condition_code in [4, 5]: #MI, PL
+        return [('N', 'S')]
+    elif condition_code in [6, 7]: #VS, VC
+        return [('V', 'S')]
+    elif condition_code in [8, 9]: #HI, LS
+        return [('C', 1), ('Z', 'S')]
+    elif condition_code in [10, 11]: #GE/LT
+        return [('N', 1), ('V', 'S')]
+    elif condition_code == 12: #GT
+        return [('Z', 0), ('N', 1), ('V', 'S')]
+    elif condition_code == 13: #LE
+        return [('Z', 1), ('N', 1), ('V', 'S')]
+    else:
+        return []
+    
+    
                         
 def parse_mnem(pc, mnem, params):
     """Parses an ARM mnemonic and returns the control flow for this instruction.
@@ -104,11 +132,12 @@ def get_outgoing(basic_blocks):
         match = RE_INSTR.match(bb.last_line)
         if match:
             pc = int(match.group(1), 16)
-            opcode = match.group(2)
+            opcode = int(match.group(2), 16)
             mnem = match.group(3)
             params = match.group(4)
 
             bb.control_flow = parse_mnem(pc, mnem, params)
+            bb.exit_flags = find_exit_conditions(opcode)
             yield bb  
                 
 def build_static_cfg(basic_blocks):
