@@ -1,5 +1,6 @@
 import re
 from pygraph.classes.digraph import digraph
+from pygraph.classes.digraph import AdditionError
 from pygraph.readwrite.dot import write
 import collections
 
@@ -69,8 +70,11 @@ class Function():
         return edges
         
         
-    def add_basic_block(self, bb):
-        self.basic_blocks.append(bb)
+    def __str__(self):
+        return self.name
+        
+    def __repr__(self):
+        return self.__str__()
         
 def get_basic_blocks(qemu_trace_file):
     """Takes the path to a qemu trace file (with in_asm tracing enabled) 
@@ -186,7 +190,11 @@ def group_functions(basic_blocks):
     functions = {}
     
     nodes = {}
+    is_first_bb = True
     for bb in get_outgoing(basic_blocks):
+        if is_first_bb:
+            is_first_bb = False
+            functions[bb.start] = Function("entry_0x%08x" % bb.start, bb)
         nodes[bb.start] = bb
         for cf in bb.control_flow:
             if cf[0] in [CF_REGULAR, CF_CONDITIONAL_BRANCH, CF_UNCONDITIONAL_BRANCH, CF_INDIRECT] and not cf[1] is None:
@@ -221,6 +229,25 @@ def graph_functions(functions):
             function_graph.add_edge(edge)
             
         yield(function, function_graph)
+        
+def build_function_call_graph(functions):
+    edges = []
+    graph = digraph()
+    
+    graph.add_nodes(functions.values()) 
+    for function in functions.values():
+        for bb in function.get_basic_blocks():
+            for cf in bb.control_flow:
+                if cf[0] in [CF_CALL] and not cf[1] is None:
+                    edge = (function, functions[cf[1]])
+                    if not edge in edges:
+                        edges.append(edge)
+                        try:
+                            graph.add_edge(edge)
+                        except AdditionError as err:
+                            pass
+        
+    return graph
                 
 def build_static_cfg(basic_blocks, no_function_inlining = True, add_unexplored_bbs = True):
     """Build a pygraph digraph object from an iterator of basic blocks."""
@@ -274,10 +301,17 @@ if __name__ == "__main__":
         if not (err.errno == errno.EEXIST):
             raise err
 
-    for function_graph in graph_functions(group_functions(get_basic_blocks(sys.argv[1]))):
+    functions = group_functions(get_basic_blocks(sys.argv[1]))
+    for function_graph in graph_functions(functions):
         dot = write(function_graph[1])
         with open(os.path.join("functions", function_graph[0].name + ".dot"), 'w') as file:
             file.write(dot)
+            
+    dot = write(build_function_call_graph(functions))
+    with open("function_call_graph.dot", 'w') as file:
+        file.write(dot)
+            
+    
     
     
     
