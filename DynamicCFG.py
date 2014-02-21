@@ -15,7 +15,6 @@ def build_dynamic_cfg(trace_file, basic_blocks_path):
     print("static analysis done, bbs=%d" % len(all_bbs))
     total = 0
     last_bb = None
-    edges = {}
     added_edges = 0
     for h, e in trace_file.generate_elements():
         # this should be ExecutionTraceInstr, but we dont have this data
@@ -34,15 +33,12 @@ def build_dynamic_cfg(trace_file, basic_blocks_path):
                 continue
             try:
                 # add edge from last_bb to this_bb, only if doesn't exist
-                if str(this_bb) not in edges[str(last_bb)]:
-                    edges[str(last_bb)].append(str(this_bb))
-                    try:
-                        graph.add_edge((last_bb, this_bb))
-                        added_edges += 1
-                    except AdditionError:
-                        pass
+                try:
+                    graph.add_edge((last_bb, this_bb))
+                    added_edges += 1
+                except AdditionError:
+                    pass
             except KeyError:
-                edges[str(last_bb)] = [str(this_bb)]
                 pass
             last_bb = this_bb
         except KeyError:
