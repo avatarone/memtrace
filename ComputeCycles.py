@@ -70,6 +70,28 @@ def find_all_cycles(graph):
 
     return cycles
 
+def get_escape_bbs(basic_blocks):
+    """
+    From a list of BBS that form a cycle some of the basic blocks can break the
+    cycle. We want to find these basic blocks and, later, mark the data that is
+    used by the conditional jump as being symbolic such that we can "escape"
+    from this loop.
+    """
+    ret = []
+    start_pcs = {}
+    for bb in basic_blocks:
+        start_pcs[bb.start] = bb
+    for bb in basic_blocks:
+        bb_points_outside = False
+        for _, target_pc in bb.control_flow:
+            # XXX: asume that we're jumping only at the begin of a basic block
+            if target_pc not in start_pcs:
+                bb_points_outside = True
+                break
+        if bb_points_outside:
+            ret += [bb]
+    return ret
+
 if __name__ == '__main__':
     gr = build_dynamic_cfg(TraceFile(sys.argv[1]), sys.argv[2])
     print("Done building dynamic cfg")
@@ -80,6 +102,9 @@ if __name__ == '__main__':
     cycles = find_all_cycles(gr)
     print("found %d cycles" % len(cycles))
     for cycle in cycles:
-        for bb in cycle:
-            print("@0x%08x->" % bb.start),
-        print("")
+        print("cycle [%d]: %s" % (len(cycle), cycle))
+        #for bb in cycle:
+        #    #print("@0x%08x(%s)->" % (bb.start, repr(bb.control_flow))),
+        #print("")
+        escape_bbs = get_escape_bbs(cycle)
+        print("Escape bbs [%d]: %s" % (len(escape_bbs), escape_bbs))
