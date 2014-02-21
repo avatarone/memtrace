@@ -37,8 +37,12 @@ def build_dynamic_cfg(trace_file, basic_blocks_path):
             try:
                 # add edge from last_bb to this_bb, only if doesn't exist
                 try:
-                    graph.add_edge((last_bb, this_bb))
-                    added_edges += 1
+                    exit_ins = [cf[0] for cf in last_bb.control_flow]
+                    if CF_CALL not in exit_ins and \
+                            CF_INDIRECT_CALL not in exit_ins and \
+                            CF_RETURN not in exit_ins:
+                        graph.add_edge((last_bb, this_bb))
+                        added_edges += 1
                 except AdditionError:
                     pass
             except KeyError:
