@@ -2,7 +2,6 @@ import sys
 sys.path.append('..')
 sys.path.append('/usr/lib/graphviz/python/')
 sys.path.append('/usr/lib64/graphviz/python/')
-import gv
 
 # Import pygraph
 from pygraph.classes.graph import graph
@@ -96,9 +95,16 @@ if __name__ == '__main__':
     gr = build_dynamic_cfg(TraceFile(sys.argv[1]), sys.argv[2])
     print("Done building dynamic cfg")
     dot = write(gr)
-    gvv = gv.readstring(dot)
-    gv.layout(gvv,'dot')
-    gv.render(gvv,'ps','/tmp/o.ps')
+    
+    try:
+        import gv
+        gvv = gv.readstring(dot)
+        gv.layout(gvv,'dot')
+        gv.render(gvv,'ps','/tmp/o.ps')
+    except ImportError as err:
+        with open("cfg.dot", 'w') as file:
+            file.write(dot)
+
     cycles = find_all_cycles(gr)
     print("found %d cycles" % len(cycles))
     for cycle in cycles:
