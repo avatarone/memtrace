@@ -20,8 +20,8 @@ def build_dynamic_cfg(trace_file, basic_blocks_path):
     for h, e in trace_file.generate_elements():
         # this should be ExecutionTraceInstr, but we dont have this data
         # another experiment is needed
-        #if e.__class__ == ExecutionTraceInstr:
-        if e.__class__ == ExecutionTraceMemory:
+        #if e.__class__ == ExecutionTraceMemory:
+        if e.__class__ == ExecutionTraceInstr:
             total += 1
         try:
             try:
