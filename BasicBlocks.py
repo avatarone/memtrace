@@ -108,7 +108,7 @@ def parse_mnem(pc, mnem, params):
     elif mnem.startswith("b"):
         match = RE_HEXNUM.match(params.strip())
         if match:
-            return [(CF_REGULAR, pc), (CF_CONDITIONAL_BRANCH, int(match.group(0), 16))]
+            return [(CF_REGULAR, pc + 4), (CF_CONDITIONAL_BRANCH, int(match.group(0), 16))]
         else:
             raise RuntimeError("Cannot parse branch target of conditional branch")
     elif mnem == "mov" and params.startswith("pc"):
