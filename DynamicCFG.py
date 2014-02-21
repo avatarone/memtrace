@@ -16,6 +16,8 @@ def build_dynamic_cfg(trace_file, basic_blocks_path):
     total = 0
     last_bb = None
     added_edges = 0
+    last_bbs = []
+    L = 30
     for h, e in trace_file.generate_elements():
         # this should be ExecutionTraceInstr, but we dont have this data
         # another experiment is needed
@@ -30,6 +32,7 @@ def build_dynamic_cfg(trace_file, basic_blocks_path):
                 continue
             if last_bb is None:
                 last_bb = this_bb
+                graph.node_attr[this_bb] = [("style","filled"), ("fillcolor","green")]
                 continue
             try:
                 # add edge from last_bb to this_bb, only if doesn't exist
@@ -41,8 +44,12 @@ def build_dynamic_cfg(trace_file, basic_blocks_path):
             except KeyError:
                 pass
             last_bb = this_bb
+            last_bbs += [last_bb]
+            last_bbs = last_bbs[-L:]
         except KeyError:
             continue
+    for i in range(L):
+        graph.node_attr[last_bbs[i]] = [("style","filled"), ("color","\"#%02x0000\"" % int(100+(i+1)*150/L))]
     print("total = %d, added_edges = %d" % (total, added_edges))
     return graph
 
