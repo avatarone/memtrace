@@ -100,7 +100,7 @@ if __name__ == '__main__':
         import gv
         gvv = gv.readstring(dot)
         gv.layout(gvv,'dot')
-        gv.render(gvv,'ps','/tmp/o.ps')
+        gv.render(gvv,'svg','/tmp/o.svg')
     except ImportError as err:
         with open("cfg.dot", 'w') as file:
             file.write(dot)
