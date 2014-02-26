@@ -35,8 +35,6 @@ def build_dynamic_cfg(trace_file, basic_blocks_path):
             try:
                 try:
                     this_bb = bbs_start_pos[e._data['pc']]
-                    if e._data['pc'] == 0x0100afb8:
-                        log.debug("TS = %s" % str(h._data['timeStamp']))
                 except:
                     # not a start
                     continue
@@ -75,10 +73,6 @@ def build_dynamic_cfg(trace_file, basic_blocks_path):
                         if CF_CALL not in exit_ins and \
                                 CF_INDIRECT_CALL not in exit_ins and \
                                 CF_RETURN not in exit_ins:
-                            if last_bb == this_bb:
-                                if last_bb.start == 0x0100afb8:
-                                    log.debug("DYNAMIC")
-                                    pass
 
                             graph.add_edge((last_bb, this_bb))
                             added_edges += 1
