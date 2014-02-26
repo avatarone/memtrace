@@ -110,11 +110,15 @@ if __name__ == '__main__':
             file.write(dot)
 
     cycles = find_all_cycles(gr)
+    pcs_to_mark = {}
     log.info("found %d cycles" % len(cycles))
     for cycle in cycles:
         log.info("cycle [%d]: %s" % (len(cycle), cycle))
         escape_bbs = get_escape_bbs(cycle)
         log.info("Escape bbs [%d]: %s" % (len(escape_bbs), escape_bbs))
         for ebb in escape_bbs:
-            print("@0x%08x%s" % (ebb.start, ebb.exit_flags)),
-        print('')
+            #print("@0x%08x%s" % (ebb.start, ebb.exit_flags)),
+            pcs_to_mark[ebb.end] = ebb.exit_flags
+        #print('')
+    for pc in pcs_to_mark:
+        print("mark @%08x -> %s" % (pc, str(pcs_to_mark[pc])))
