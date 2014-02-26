@@ -280,7 +280,10 @@ def build_static_cfg(basic_blocks, no_function_inlining = True, add_unexplored_b
             start = nodes[edge[0]]
             end = nodes[edge[1]]
             print("Start: %s, End: %s" % (repr(start), repr(end)))
-            graph.add_edge((start, end))
+            try:
+                graph.add_edge((start, end))
+            except AdditionError:
+                print("Edge already in graph, not adding")
         except KeyError as err:
             print("Dropping edge 0x%08x-0x%08x because one node seems to be not in the graph" % (edge[0], edge[1]))
         
