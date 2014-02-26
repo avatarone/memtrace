@@ -255,6 +255,7 @@ def build_static_cfg(basic_blocks, no_function_inlining = True, add_unexplored_b
     """Build a pygraph digraph object from an iterator of basic blocks."""
     nodes = {}
     edges = []
+    unexplored_bbs = []
     for bb in get_outgoing(basic_blocks):
          nodes[bb.start] = bb
          for cf in bb.control_flow:
@@ -269,6 +270,7 @@ def build_static_cfg(basic_blocks, no_function_inlining = True, add_unexplored_b
             for cf in bb.control_flow:
                 if not cf[1] is None and not nodes.has_key(cf[1]):
                     nodes[cf[1]] = BasicBlock(cf[1])
+                    unexplored_bbs += [nodes[cf[1]]]
         
     graph = digraph()
     for node in nodes.values():
@@ -289,7 +291,7 @@ def build_static_cfg(basic_blocks, no_function_inlining = True, add_unexplored_b
         except KeyError as err:
             log.warning("Dropping edge 0x%08x-0x%08x because one node seems to be not in the graph" % (edge[0], edge[1]))
         
-    return graph
+    return (graph, unexplored_bbs)
                     
 if __name__ == "__main__":
     import sys

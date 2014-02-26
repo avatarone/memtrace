@@ -12,9 +12,14 @@ def build_dynamic_cfg(trace_file, basic_blocks_path):
     for bb in get_basic_blocks(basic_blocks_path):
         all_bbs += [bb]
         bbs_start_pos[bb.start] = bb
-    graph = \
+    graph, unexplored_bbs = \
             build_static_cfg(
                     get_outgoing(all_bbs))
+
+    # extend the dictionary with unexplored bbs
+    for bb in unexplored_bbs:
+        bbs_start_pos[bb.start] = bb
+
     log.info("static analysis done, bbs=%d" % len(all_bbs))
     total = 0
     last_bb = None
