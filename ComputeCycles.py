@@ -3,6 +3,8 @@ sys.path.append('..')
 sys.path.append('/usr/lib/graphviz/python/')
 sys.path.append('/usr/lib64/graphviz/python/')
 
+import logging
+
 # Import pygraph
 from pygraph.classes.graph import graph
 from pygraph.classes.digraph import digraph
@@ -12,6 +14,8 @@ from pygraph.readwrite.dot import write
 
 from DynamicCFG import build_dynamic_cfg
 from TraceEntries import *
+
+log = logging.getLogger(__name__)
 
 """
 find_all_cycles contributed by Mathias Laurin <Mathias Laurin AT gmail com>
@@ -93,7 +97,7 @@ def get_escape_bbs(basic_blocks):
 
 if __name__ == '__main__':
     gr = build_dynamic_cfg(TraceFile(sys.argv[1]), sys.argv[2])
-    print("Done building dynamic cfg")
+    log.info("Done building dynamic cfg")
     dot = write(gr)
     
     try:
@@ -106,11 +110,11 @@ if __name__ == '__main__':
             file.write(dot)
 
     cycles = find_all_cycles(gr)
-    print("found %d cycles" % len(cycles))
+    log.info("found %d cycles" % len(cycles))
     for cycle in cycles:
-        print("cycle [%d]: %s" % (len(cycle), cycle))
+        log.info("cycle [%d]: %s" % (len(cycle), cycle))
         #for bb in cycle:
         #    #print("@0x%08x(%s)->" % (bb.start, repr(bb.control_flow))),
         #print("")
         escape_bbs = get_escape_bbs(cycle)
-        print("Escape bbs [%d]: %s" % (len(escape_bbs), escape_bbs))
+        log.info("Escape bbs [%d]: %s" % (len(escape_bbs), escape_bbs))

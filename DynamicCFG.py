@@ -2,6 +2,9 @@ from TraceEntries import *
 from BasicBlocks import *
 from pygraph.classes.exceptions import AdditionError
 import sys
+import logging
+
+log = logging.getLogger(__name__)
 
 def build_dynamic_cfg(trace_file, basic_blocks_path):
     all_bbs = []
@@ -12,7 +15,7 @@ def build_dynamic_cfg(trace_file, basic_blocks_path):
     graph = \
             build_static_cfg(
                     get_outgoing(all_bbs))
-    print("static analysis done, bbs=%d" % len(all_bbs))
+    log.info("static analysis done, bbs=%d" % len(all_bbs))
     total = 0
     last_bb = None
     added_edges = 0
@@ -28,7 +31,7 @@ def build_dynamic_cfg(trace_file, basic_blocks_path):
                 try:
                     this_bb = bbs_start_pos[e._data['pc']]
                     if e._data['pc'] == 0x0100afb8:
-                        print("TS = %s" % str(h._data['timeStamp']))
+                        log.debug("TS = %s" % str(h._data['timeStamp']))
                 except:
                     # not a start
                     continue
@@ -47,7 +50,7 @@ def build_dynamic_cfg(trace_file, basic_blocks_path):
                                 except KeyError:
                                     if target_pc is None:
                                         target_pc = -1
-                                    print("target BB not found 0x@%08x" % target_pc)
+                                    log.debug("target BB not found 0x@%08x" % target_pc)
                                 try:
                                     graph.add_edge((this_bb, target_bb))
                                     added_edges += 1
@@ -60,7 +63,7 @@ def build_dynamic_cfg(trace_file, basic_blocks_path):
                                 CF_RETURN not in exit_ins:
                             if last_bb == this_bb:
                                 if last_bb.start == 0x0100afb8:
-                                    print("DYNAMIC")
+                                    log.debug("DYNAMIC")
                                     pass
 
                             graph.add_edge((last_bb, this_bb))
@@ -80,7 +83,7 @@ def build_dynamic_cfg(trace_file, basic_blocks_path):
                 continue
     for i in range(L):
         graph.node_attr[last_bbs[i]] = [("style","filled"), ("color","\"#%02x0000\"" % int(100+(i+1)*150/L))]
-    print("total = %d, added_edges = %d" % (total, added_edges))
+    log.info("total = %d, added_edges = %d" % (total, added_edges))
     return graph
 
 if __name__ == "__main__":

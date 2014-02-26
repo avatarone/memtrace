@@ -3,6 +3,7 @@ from pygraph.classes.digraph import digraph
 from pygraph.classes.digraph import AdditionError
 from pygraph.readwrite.dot import write
 import collections
+import logging
 
 STATE_BEFORE_BEGINNING = 0
 STATE_INSIDE = 1
@@ -18,6 +19,7 @@ CF_RETURN = 6
 
 RE_HEXNUM = re.compile("(0x)?[0-9a-fA-F]+")
 
+log = logging.getLogger(__name__)
 class BasicBlock():
     def __init__(self, start, end = 0, last_line = "", translated = False):
         self.start = start
@@ -158,7 +160,7 @@ def parse_mnem(pc, mnem, params):
     elif mnem.startswith("mov") and params.startswith("pc"):
         return [(CF_RETURN, None), (CF_REGULAR, pc + 4)]  
     elif mnem == "ldr" and params.startswith("pc, [pc"):
-        print("TODO: figure out target of LDR at 0x%08x" % pc)
+        log.warning("TODO: figure out target of LDR at 0x%08x" % pc)
         return [(CF_UNCONDITIONAL_BRANCH, None)]
     elif mnem == "ldr":
         return [(CF_INDIRECT, None)]
@@ -167,7 +169,7 @@ def parse_mnem(pc, mnem, params):
     elif mnem.startswith("pop") and "pc" in params:
         return [(CF_RETURN, None), (CF_REGULAR, pc + 4)]
     else:
-        print("WARNING: Unknown instruction '%s' '%s' at 0x%x" % (mnem, params, pc))
+        log.warning("WARNING: Unknown instruction '%s' '%s' at 0x%x" % (mnem, params, pc))
         return [(CF_REGULAR, pc + 4)]
                         
 def get_outgoing(basic_blocks):
@@ -279,13 +281,13 @@ def build_static_cfg(basic_blocks, no_function_inlining = True, add_unexplored_b
         try:
             start = nodes[edge[0]]
             end = nodes[edge[1]]
-            print("Start: %s, End: %s" % (repr(start), repr(end)))
+            log.debug("Start: %s, End: %s" % (repr(start), repr(end)))
             try:
                 graph.add_edge((start, end))
             except AdditionError:
-                print("Edge already in graph, not adding")
+                log.warning("Edge already in graph, not adding")
         except KeyError as err:
-            print("Dropping edge 0x%08x-0x%08x because one node seems to be not in the graph" % (edge[0], edge[1]))
+            log.warning("Dropping edge 0x%08x-0x%08x because one node seems to be not in the graph" % (edge[0], edge[1]))
         
     return graph
                     
