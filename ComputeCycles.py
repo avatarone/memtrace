@@ -54,10 +54,10 @@ def find_all_cycles(graph):
                 spanning_tree[each] = node
                 dfs(each)
             else:
-                if (spanning_tree[each] != node):
-                    cycle = find_cycle_to_ancestor(spanning_tree, node, each)
-                    if cycle:
-                        cycles.append(cycle)
+                #if (spanning_tree[each] != node):
+                cycle = find_cycle_to_ancestor(spanning_tree, node, each)
+                if cycle:
+                    cycles.append(cycle)
 
     visited = set()         # List for marking visited and non-visited nodes
     spanning_tree = {}      # Spanning tree
