@@ -62,6 +62,15 @@ def build_dynamic_cfg(trace_file, basic_blocks_path):
                                 except AdditionError:
                                     # ignore this edge, already added
                                     pass
+                            if cf_type == CF_CALL:
+                                try:
+                                    target_bb = bbs_start_pos[target_pc]
+                                except KeyError:
+                                    continue
+                                # mark target node as a start BB of a function
+                                # we should test if this node is explored or not
+                                graph.node_attr[target_bb] = \
+                                        [("style","filled"), ("color","\"#2AE5E8\"" )]
                         exit_ins = [cf[0] for cf in last_bb.control_flow]
                         if CF_CALL not in exit_ins and \
                                 CF_INDIRECT_CALL not in exit_ins and \
