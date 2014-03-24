@@ -210,41 +210,39 @@ class ExecutionTraceType(object):
 class TraceFile(object):
     def __init__(self, path):
         self._path = path
-        self._data_in = None
-
-    def _load_data(self):
-        with open(self._path, 'r') as f:
-            self._data_in = f.read()
-            #print("File in memory")
+        self._fd = open(self._path, 'r')
 
     def generate_elements(self):
-        if self._data_in is None:
-            self._load_data()
         parsed_len = 0
-        total_len = len(self._data_in)
-        while parsed_len < total_len:
+        while True:
             hdr = ExecutionTraceItemHeader()
             try:
-                hdr.loads(self._data_in[parsed_len:parsed_len+len(hdr)])
+                hdr_data = self._fd.read(len(hdr))
+                if not hdr_data:
+                    break
+                hdr.loads(hdr_data)
             except:
                 print("Unable to load execution trace item header")
                 break
             parsed_len += len(hdr)
-            #print(repr(hdr._data))
-            #print(datetime.datetime.fromtimestamp(hdr.timeStamp).strftime('%Y-%m-%d %H:%M:%S'))
-            #hdr.type = hdr._data['type']
             next_type = (ExecutionTraceType.get_type_from_val(hdr._data['type']))
             if next_type == None:
                 print("Unknown type: 0x%x" % hdr._data['type'])
             else:
                 payload = next_type()
                 try:
-                    payload.loads(self._data_in[parsed_len:parsed_len+len(payload)])
+                    payload_data = self._fd.read(len(payload))
+                    if not payload_data:
+                        break
+                    if len(payload_data) != len(payload):
+                        print("invalid size")
+                        break
+                    payload.loads(payload_data)
                 except:
                     break
                 yield (hdr, payload)
-            #parsed_len += hdr.size
             parsed_len += hdr._data['size']
+            self._fd.seek(parsed_len, 0)
 
     def count_entries_ok(self):
         cnt = 0
