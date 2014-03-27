@@ -28,3 +28,6 @@ if __name__ == "__main__":
                 #print(hex(p._data['address'])),
                 #print(hex(p._data['value'])),
                 #print(hex(p._data['size']))
+        elif h._data['type'] == ExecutionTraceType.TRACE_INSTR_START:
+            # do nothing, we don't care about this entry
+            pass
