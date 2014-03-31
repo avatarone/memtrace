@@ -110,7 +110,7 @@ class ExecutionTraceMemory(ExecutionTraceEntry):
     EXECTRACE_MEM_SYMBHOSTADDR = 32
     EXECTRACE_MEM_CODE = 64
     def __init__(self):
-        self._fields = [('pc',64), ('address',64), ('value',64), ('size',8), ('flags',8)]
+        self._fields = [('pc',64), ('address',64), ('value',64), ('size',8), ('flags',8), ('hostAddress', 64)]
         super(ExecutionTraceMemory, self).__init__()
 
 class ExecutionTraceItemHeader(ExecutionTraceEntry):
