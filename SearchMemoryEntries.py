@@ -7,12 +7,12 @@ ranges=[0x15000000, 0x13000000, 0x16000000]
 #page=   0x1000
 page=   0x10
 
-def touches_one(addr, base):
-    return (addr < (base + page)) and (addr >= base)
+def touches_one(addr, base, size):
+    return (addr < (base + size)) and (addr >= base)
 
-def touches_any(addr):
-    for b in ranges:
-        if touches_one(addr, b):
+def touches_any(addr, my_ranges=ranges, my_size=page):
+    for b in my_ranges:
+        if touches_one(addr, b, my_size):
             return True
     return False
 
