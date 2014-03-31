@@ -175,6 +175,11 @@ class ExecutionTraceInstr(ExecutionTraceEntry):
         self._fields = [("isSymbolic", 8), ("arch", 32), ("pc", 64), ("symbMask", 32), ("flags", 64), ("arm_registers", [32] * 15)]
         super(ExecutionTraceInstr, self).__init__()
 
+class ExecutionTraceConcolicForkKill(ExecutionTraceEntry):
+    def __init__(self):
+        self._fields = [("pc", 64), ("killed_state_id", 64), ("condition_offset", 64), ("condition_size", 16)]
+        super(ExecutionTraceInstr, self).__init__()
+        
 class ExecutionTraceType(object):
     TRACE_MOD_LOAD     = 0
     TRACE_MOD_UNLOAD   = 1
@@ -194,7 +199,8 @@ class ExecutionTraceType(object):
     TRACE_ICOUNT       = 15
     TRACE_MEM_CHECKER  = 16
     TRACE_INSTR_START  = 17
-    TRACE_MAX          = 18
+    TRACE_CONCOLIC_FORK_KILL = 18
+    TRACE_MAX          = 19
     types = [
             ('TRACE_MOD_LOAD',   None),
             ('TRACE_MOD_UNLOAD', None),
@@ -214,6 +220,7 @@ class ExecutionTraceType(object):
             ('TRACE_ICOUNT',     None),
             ('TRACE_MEM_CHECKER',None),
             ('TRACE_INSTR_START',ExecutionTraceInstr),
+            ('TRACE_CONCOLIC_FORK_KILL', ExecutionTraceConcolicForkKill),
             ('TRACE_MAX',        None)
     ]
     @staticmethod
