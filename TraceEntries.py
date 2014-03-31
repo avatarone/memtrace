@@ -39,22 +39,38 @@ class ExecutionTraceEntry(object):
         for field, size in self._fields:
             if type(size) == list:
                 s += 'uint%d_t %s = [' % (size[0], field)
-                for v in getattr(self, field, []):
-                    s += '%08x, ' % v
+                if SET_ATTRIBUTES:
+                    for v in getattr(self, field, []):
+                        s += '%08x, ' % v
+                else:
+                    for v in self._data[field]:
+                        s += '%08x, ' % v
                 s += ']'
             else:
-                s += 'uint%d_t %s = %s, ' % (size, field, hex(getattr(self, field, 0)))
+                if SET_ATTRIBUTES:
+                    s += 'uint%d_t %s = %s, ' % (size, field, hex(getattr(self, field, 0)))
+                else:
+                    s += 'uint%d_t %s = %s, ' % (size, field, hex(self._data[field]))
+
         return s
 
     def dumps(self):
         ret = ''
         for field, size in self._fields:
             if type(size) == list:
-                ret += struct.pack('<'+self.get_field_descr_for_pack(size[0])*
-                        len(size), *getattr(self, field, []))
+                if SET_ATTRIBUTES:
+                    ret += struct.pack('<'+self.get_field_descr_for_pack(size[0])*
+                            len(size), *getattr(self, field, []))
+                else:
+                    ret += struct.pack('<'+self.get_field_descr_for_pack(size[0])*
+                            len(size), *self._data[field])
             else:
-                ret += struct.pack('<'+self.get_field_descr_for_pack(size),
+                if SET_ATTRIBUTES:
+                    ret += struct.pack('<'+self.get_field_descr_for_pack(size),
                         getattr(self, field, 0))
+                else:
+                    ret += struct.pack('<'+self.get_field_descr_for_pack(size),
+                            self._data[field])
         return ret
 
     def _get_unpack_string(self):
