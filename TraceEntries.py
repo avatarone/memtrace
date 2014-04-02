@@ -254,6 +254,8 @@ class TraceFile(object):
                 if not hdr_data:
                     break
                 hdr.loads(hdr_data)
+            except KeyboardInterrupt as ex:
+                raise ex
             except:
                 print("Unable to load execution trace item header")
                 break
@@ -271,6 +273,8 @@ class TraceFile(object):
                         print("invalid size")
                         break
                     payload.loads(payload_data)
+                except KeyboardInterrupt as ex:
+                    raise ex
                 except:
                     break
                 yield (hdr, payload)
