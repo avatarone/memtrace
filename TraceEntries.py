@@ -2,8 +2,18 @@ import struct
 from collections import namedtuple
 import datetime
 import sys
+import gzip
+import bz2
 
 SET_ATTRIBUTES = False
+
+def open_file(filename, access_mode):
+    if filename.endswith(".bz2"):
+        return bz2.BZ2File(filename, access_mode)
+    elif filename.endswith(".gz"):
+        return gzip.GzipFile(filename, access_mode)
+    else:
+        return open(filename, access_mode)
 
 class ExecutionTraceEntry(object):
     _cached_unpacked_strings = {}
@@ -233,7 +243,7 @@ class ExecutionTraceType(object):
 class TraceFile(object):
     def __init__(self, path):
         self._path = path
-        self._fd = open(self._path, 'r')
+        self._fd = open_file(self._path, 'r')
 
     def generate_elements(self):
         parsed_len = 0
