@@ -2,6 +2,7 @@ import argparse
 from TraceEntries import *
 from collections import defaultdict, OrderedDict
 import logging
+import json
 
 ARM_REG_SP = 13
 
@@ -131,6 +132,7 @@ class MemoryMap(object):
         for r in unified_ranges:
             r["start"] = r["start"] * self._binsize
             r["end"] = r["end"] * self._binsize + self._binsize - 1
+            r['size'] = r["end"] - r["start"]
                 
         return unified_ranges
             
@@ -160,6 +162,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("tracefile", type = str, metavar =  "FILE", help = "Trace file used as input")
     parser.add_argument("-v", "--verbose", action = "store_true", default = False, help = "Verbose output")
+    parser.add_argument("-j", "--dump-json", type = str, dest = "json", default = None, help = "Dump memory map as JSON to this file")
     args = parser.parse_args()
     
     if (args.verbose):
@@ -168,6 +171,10 @@ def main():
         logging.basicConfig(level = logging.WARN)
     
     mm = buildMemoryMap(args.tracefile)
+    if not args.json is None:
+        with open(args.json, 'w') as file:
+            json.dump(mm, file, sort_keys=True, indent=4, separators=(',', ': '))
+            
     for elem in mm:
         print("start: 0x%08x, end: 0x%08x, type: %s" % tuple(map(lambda x: elem[x], ["start", "end", "type"])))
     
