@@ -182,7 +182,7 @@ class ExecutionTraceTb(ExecutionTraceEntry):
 
 class ExecutionTraceInstr(ExecutionTraceEntry):
     def __init__(self):
-        self._fields = [("isSymbolic", 8), ("arch", 32), ("pc", 64), ("symbMask", 32), ("flags", 64), ("arm_registers", [32] * 15)]
+        self._fields = [("isSymbolic", 8), ("arch", 32), ("pc", 64), ("symbMask", 32), ("flags", 64), ("arm_registers", [32] * 15), ("padding", 32)]
         super(ExecutionTraceInstr, self).__init__()
 
 class ExecutionTraceConcolicForkKill(ExecutionTraceEntry):
