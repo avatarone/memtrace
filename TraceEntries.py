@@ -65,23 +65,22 @@ class ExecutionTraceEntry(object):
         return s
 
     def dumps(self):
+        pack_str = self._get_unpack_string()
         ret = ''
+        arg_list = []
         for field, size in self._fields:
             if type(size) == list:
                 if SET_ATTRIBUTES:
-                    ret += struct.pack('<'+self.get_field_descr_for_pack(size[0])*
-                            len(size), *getattr(self, field, []))
+                    arg_list += [e for e in getattr(self, field, [])]
                 else:
-                    ret += struct.pack('<'+self.get_field_descr_for_pack(size[0])*
-                            len(size), *self._data[field])
+                    arg_list += [e for e in self._data[field]]
             else:
                 if SET_ATTRIBUTES:
-                    ret += struct.pack('<'+self.get_field_descr_for_pack(size),
-                        getattr(self, field, 0))
+                    arg_list += [getattr(self, field, 0)]
                 else:
-                    ret += struct.pack('<'+self.get_field_descr_for_pack(size),
-                            self._data[field])
-        return ret
+                    arg_list += [self._data[field]]
+
+        return struct.pack(pack_str, *arg_list)
 
     def _get_unpack_string(self):
         try:
