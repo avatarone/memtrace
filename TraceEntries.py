@@ -188,7 +188,7 @@ class ExecutionTraceInstr(ExecutionTraceEntry):
 class ExecutionTraceConcolicForkKill(ExecutionTraceEntry):
     def __init__(self):
         self._fields = [("pc", 64), ("killed_state_id", 64), ("condition_offset", 64), ("condition_size", 16)]
-        super(ExecutionTraceInstr, self).__init__()
+        super(ExecutionTraceConcolicForkKill, self).__init__()
         
 class ExecutionTraceType(object):
     TRACE_MOD_LOAD     = 0
