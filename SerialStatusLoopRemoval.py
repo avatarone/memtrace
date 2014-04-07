@@ -11,7 +11,9 @@ from TraceEntries import *
 
 if __name__ == "__main__":
     tf = TraceFile(sys.argv[1])
-    of = open(sys.argv[2], 'wb')
+
+    # use this function for compression
+    of = open_file(sys.argv[2], 'wb')
 
     last_entry = None
     l = 0
