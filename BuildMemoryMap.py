@@ -132,7 +132,7 @@ class MemoryMap(object):
         for r in unified_ranges:
             r["start"] = r["start"] * self._binsize
             r["end"] = r["end"] * self._binsize + self._binsize - 1
-            r['size'] = r["end"] - r["start"]
+            r['size'] = r["end"] - r["start"] + 1
                 
         return unified_ranges
             
@@ -162,15 +162,26 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("tracefile", type = str, metavar =  "FILE", help = "Trace file used as input")
     parser.add_argument("-v", "--verbose", action = "store_true", default = False, help = "Verbose output")
-    parser.add_argument("-j", "--dump-json", type = str, dest = "json", default = None, help = "Dump memory map as JSON to this file")
+    parser.add_argument("-j", "--dump-json", type = str, dest = "json", default = None, 
+        help = "Dump memory map as JSON to this file")
+    parser.add_argument("-b", "--binsize", type = int, default = 256, dest = "binsize",
+        help = "Bin size used for memory bins to group memory accesses")
+    parser.add_argument("--big-endian", action = "store_true", dest = "big_endian", default = False,
+        help = "Memory trace stems from a big endian device")
     args = parser.parse_args()
     
     if (args.verbose):
         logging.basicConfig(level = logging.INFO)
     else:
         logging.basicConfig(level = logging.WARN)
+        
+    if args.big_endian:
+        endianness = ShadowMemory.ENDIAN_BIG
+    else:
+        endianness = ShadowMemory.ENDIAN_LITTLE
+        
+    mm = buildMemoryMap(args.tracefile, binsize = args.binsize, endianness = endianness)
     
-    mm = buildMemoryMap(args.tracefile)
     if not args.json is None:
         with open(args.json, 'w') as file:
             json.dump(mm, file, sort_keys=True, indent=4, separators=(',', ': '))
