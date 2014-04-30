@@ -11,6 +11,7 @@ BIN_TYPE_STACK = "stack"
 BIN_TYPE_IO = "io"
 BIN_TYPE_DATA = "data"
 BIN_TYPE_RODATA = "rodata"
+BIN_TYPE_WODATA = "wodata"
 
 log = logging.getLogger("BuildMemoryMap")
 
@@ -110,6 +111,8 @@ class MemoryMap(object):
                 classified_bins[r] = BIN_TYPE_STACK
             elif self._io[r] > 0:
                 classified_bins[r] = BIN_TYPE_IO
+            elif self._write[r] > 0 and self._read[r] == 0:
+                classified_bins[r] = BIN_TYPE_WODATA
             elif self._write[r] > 0:
                 classified_bins[r] = BIN_TYPE_DATA
             else:
