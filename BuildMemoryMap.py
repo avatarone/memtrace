@@ -58,7 +58,7 @@ class MemoryMap(object):
         self._execute = defaultdict(lambda: 0)
         self._stack = defaultdict(lambda: 0)
         self._io = defaultdict(lambda: 0)
-        self._shadow_mem = ShadowMemory()
+        self._shadow_mem = ShadowMemory(endianness)
         
     def add_memory_access(self, access):
         if access['flags'] & ExecutionTraceMemory.EXECTRACE_MEM_CODE != 0:
