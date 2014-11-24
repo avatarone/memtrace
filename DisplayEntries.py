@@ -63,4 +63,42 @@ if __name__ == "__main__":
                 last_registers = p._data['arm_registers']
             else:
                 print("Instruction: pc = 0x%08x, symbolic = %s" % (p._data['pc'], p._data['isSymbolic'] and 'yes' or 'no'))
+        elif h._data['type'] == ExecutionTraceType.TRACE_TB_START:
+            if args.terse:
+                if p._data['isSymbolic'] == 0:
+                    symbolic_concrete = 'c'
+                else:
+                    symbolic_concrete = 's'
+                registers = []
+                for (reg, regnr) in zip(p._data['arm_registers'], range(0, 16)):
+                    #registers.append("r%d: %08x" % (regnr, reg))
+                    if args.color and last_registers and last_registers[regnr] != reg:
+                        registers.append("\x1b[31m%08x\x1b[30m" % reg)
+                    else:
+                        registers.append("%08x" % (reg))
+                    if regnr in [3, 7, 11]:
+                        registers.append("#")
+                print("[S] %08x: %s %s" % (p._data['pc'], symbolic_concrete, " ".join(registers)))
+                last_registers = p._data['arm_registers']
+            else:
+                print("Instruction: pc = 0x%08x, symbolic = %s" % (p._data['pc'], p._data['isSymbolic'] and 'yes' or 'no'))
+        elif h._data['type'] == ExecutionTraceType.TRACE_TB_END:
+            if args.terse:
+                if p._data['isSymbolic'] == 0:
+                    symbolic_concrete = 'c'
+                else:
+                    symbolic_concrete = 's'
+                registers = []
+                for (reg, regnr) in zip(p._data['arm_registers'], range(0, 16)):
+                    #registers.append("r%d: %08x" % (regnr, reg))
+                    if args.color and last_registers and last_registers[regnr] != reg:
+                        registers.append("\x1b[31m%08x\x1b[30m" % reg)
+                    else:
+                        registers.append("%08x" % (reg))
+                    if regnr in [3, 7, 11]:
+                        registers.append("#")
+                print("[E] %08x: %s %s" % (p._data['pc'], symbolic_concrete, " ".join(registers)))
+                last_registers = p._data['arm_registers']
+            else:
+                print("Instruction: pc = 0x%08x, symbolic = %s" % (p._data['pc'], p._data['isSymbolic'] and 'yes' or 'no'))
         
