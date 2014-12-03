@@ -99,7 +99,7 @@ def parse_args():
     parser.add_argument("trace_file", type = str, help = "S2E ExecutionTracer.dat trace file")
     
     args = parser.parse_args()
-    logging.basicConfig(level = {0: logging.ERROR, 1: logging.WARNING, 2: logging.INFO, 3: logging.DEBUG, _default_: logging.DEBUG}[args.verbosity)])
+    logging.basicConfig(level = {0: logging.ERROR, 1: logging.WARNING, 2: logging.INFO, 3: logging.DEBUG}[min(args.verbosity, 3)])
     return args
   
 
