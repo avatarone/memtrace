@@ -4,8 +4,11 @@ import datetime
 import sys
 import gzip
 import bz2
+import logging
 
 SET_ATTRIBUTES = False
+
+log = logging.getLogger("TraceEntries")
 
 def open_file(filename, access_mode):
     if filename.endswith(".bz2"):
@@ -175,8 +178,7 @@ class ExecutionTraceCacheSimParams(ExecutionTraceEntry):
 
 class ExecutionTraceTb(ExecutionTraceEntry):
     def __init__(self):
-        self._fields = [("pc", 64), ("targetPc", 64), ("size", 32), ("tbType",
-            8), ("symbMask", 32), ("registers", [64] * 16)]
+        self._fields = [("tbType", 8), ("llvmTbName", [8] * 32), ("isSymbolic", 8), ("arch", 8), ("pc", 64), ("symbMask", 32), ("flags", 64), ("arm_registers", [32] * 15), ("padding", 32)]
         super(ExecutionTraceTb, self).__init__()
 
 class ExecutionTraceInstr(ExecutionTraceEntry):
@@ -216,8 +218,8 @@ class ExecutionTraceType(object):
             ('TRACE_PROC_UNLOAD',None),
             ('TRACE_CALL',       None),
             ('TRACE_RET',        None),
-            ('TRACE_TB_START',   ExecutionTraceInstr),
-            ('TRACE_TB_END',     ExecutionTraceInstr),
+            ('TRACE_TB_START',   ExecutionTraceTb),
+            ('TRACE_TB_END',     ExecutionTraceTb),
             ('TRACE_MODULE_DESC',None),
             ('TRACE_FORK',       ExecutionTraceFork),
             ('TRACE_CACHESIM',   None),
@@ -242,7 +244,7 @@ class ExecutionTraceType(object):
 class TraceFile(object):
     def __init__(self, path):
         self._path = path
-        self._fd = open_file(self._path, 'r')
+        self._fd = open_file(self._path, 'rb')
 
     def generate_elements(self):
         parsed_len = 0
@@ -256,7 +258,7 @@ class TraceFile(object):
             except KeyboardInterrupt as ex:
                 raise ex
             except:
-                print("Unable to load execution trace item header")
+                log.exception("Unable to load execution trace item header")
                 break
             parsed_len += len(hdr)
             next_type = (ExecutionTraceType.get_type_from_val(hdr._data['type']))

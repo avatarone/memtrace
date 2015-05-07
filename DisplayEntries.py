@@ -36,7 +36,7 @@ if __name__ == "__main__":
                     read_write = 'r'
                 print(format_string % (p._data['pc'], p._data['address'], p._data['size'], read_write, p._data['value']))
             else:
-                print("MemoryAccess: address = 0x%08x, size = %d, value = 0x%x" % (p._data['address'], p._data['size'], p._data['value']))
+                print("MemoryAccess: address = 0x%08x, hostAddress = 0x%08x, size = %d, value = 0x%x" % (p._data['address'], p._data['hostAddress'], p._data['size'], p._data['value']))
         elif h._data['type'] == ExecutionTraceType.TRACE_CONCOLIC_FORK_KILL:
             if ctf:
                 ctf.seek(p._data['condition_offset'])
